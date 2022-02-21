@@ -1,4 +1,5 @@
 import sys
+import random
 
 from crossword import *
 
@@ -126,11 +127,11 @@ class CrosswordCreator():
         for i, v1 in enumerate(variables):
             for v2 in variables[i+1:]:
                 if v2 != v1 and self.overlaps[v1, v2]:
-                    if not arcs[v1]:
+                    if not v1 in arcs:
                         arcs[v1] = {v2}
                     else:
                         arcs[v1].add(v2)
-                    if not arcs[v2]:
+                    if not v2 in arcs:
                         arcs[v2] = {v1}
                     else:
                         arcs[v2].add(v1)
@@ -198,7 +199,29 @@ class CrosswordCreator():
         The first value in the list, for example, should be the one
         that rules out the fewest values among the neighbors of `var`.
         """
-        raise NotImplementedError
+
+        neighbors = self.crossword.neighbors(var)
+        unassigned_neighbors = neighbors - set(assignment.keys())
+
+        constraint_list = list()
+        index_letter_constraints = dict()
+
+        for nbr in unassigned_neighbors:
+            i, j = self.crossword.overlaps[var, nbr]
+            if i not in index_letter_constraints:
+                index_letter_constraints[i] = list()
+            index_letter_constraints[i] += [nbr_val[j] for nbr_val in self.domains[nbr]]
+
+        for var_val in self.domains[var]:
+            constraint_list.append(
+                    var,
+                    sum([letter != var_val[index] for index, letters in index_letter_constraints.items() for letter in letters])
+                    )            
+
+        random.shuffle(constraint_list) #FIXME If the list is long, might be ineffective
+        constraint_list.sort(key = lambda x: x[1])
+
+        return [var for var, _ in constraint_list]
 
     def select_unassigned_variable(self, assignment):
         """
@@ -208,7 +231,16 @@ class CrosswordCreator():
         degree. If there is a tie, any of the tied variables are acceptable
         return values.
         """
-        raise NotImplementedError
+        
+        unassigned = self.crossword.variables - set(self.assignment.keys())
+
+        consider = list()
+        cur_min = len(self.crossword.words)
+        
+        random.shuffle(unassigned) #FIXME uneffective if long list
+
+        unassigned.sort(key = lambda x: (len(self.domains[x]), -len(self.crossword.neighbors())))
+        return unassigned[0] if unassigned else None
 
     def backtrack(self, assignment):
         """
