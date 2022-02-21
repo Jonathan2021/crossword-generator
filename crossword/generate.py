@@ -117,27 +117,29 @@ class CrosswordCreator():
         length_before = len(self.domains[x])
         self.domains[x] = [word for word in self.domain[x] if x[xi] in y_letters]
         return length_before != len(self.domains[x])
-    
-    def _get_arcs(self, variables = None):
-        arcs = dict()
+
+    def _get_all_neighbors(self, variables= None):
+        neighbors = dict()
         if not variables:
             variables = self.crossword.variables
 
         # just a bit faster than calling neighbors on each
         for i, v1 in enumerate(variables):
             for v2 in variables[i+1:]:
-                if v2 != v1 and self.overlaps[v1, v2]:
-                    if not v1 in arcs:
-                        arcs[v1] = {v2}
+                if v2 != v1 and self.crossword.overlaps[v1, v2]:
+                    if not v1 in neighbors:
+                        neighbors[v1] = {v2}
                     else:
-                        arcs[v1].add(v2)
-                    if not v2 in arcs:
-                        arcs[v2] = {v1}
+                        neighbors[v1].add(v2)
+                    if not v2 in neighbors:
+                        neighbors[v2] = {v1}
                     else:
-                        arcs[v2].add(v1)
-                    queue.append((v1, v2))
-                    queue.append((v2, v1))
-        return arcs
+                        neighbors[v2].add(v1)
+        return neighbors
+
+    def _get_arcs(self, variables = None):
+        neighbors = self._get_all_neighbors(variables)
+        return [(v1, v2) for v1, v2s in neighbors.items() for v2 in v2s], neighbors
 
     def ac3(self, arcs=None):
         """
@@ -149,17 +151,16 @@ class CrosswordCreator():
         return False if one or more domains end up empty.
         """
 
-        queue = list()
         if not arcs:
-            arcs = self._get_arcs()
-        
-        while queue:
-            x, y = queue.pop()
+            arcs, neighbors = self._get_arcs()
+
+        while arcs:
+            x, y = arcs.pop()
             if revise(x,y):
                 if not self.domains[x]:
                     return False
                 else:
-                    queue = queue + [(z,x) for z in arcs[x] if z != y]
+                    arcs = arcs + [(z,x) for z in neighbors[x] if z != y]
         return True
 
     def assignment_complete(self, assignment):
@@ -182,10 +183,10 @@ class CrosswordCreator():
                 return False
             vals.add(val)
 
-        arcs = self._get_arcs(assignment.keys())
+        all_neighbors = self._get_all_neighbors(assignment.keys())
 
         #FIXME There is some double checks we may be able to get rid of somehow
-        for var, neighbors in arcs.items():
+        for var, neighbors in all_neighbors.items():
             for n in neighbors:
                 vari, ni = self.crossword.overlaps[var, n]
                 if assignment[var][vari] != assignment[n][ni]:
@@ -251,7 +252,17 @@ class CrosswordCreator():
 
         If no assignment is possible, return None.
         """
-        raise NotImplementedError
+        if self.assignment_complete(assignment):
+            return assignment
+        var = self.select_unassigned_variable(assignment)
+        
+        new_assignment = assignment.copy()
+        for val in self.order_domain_values(var, assignment):
+            new_assignment[var] = val
+            if self.consistent(new_assignement): #FIXME self.consistent checks everything when you only need to check the neighbors of the new variable + don't we already check it in self.order_domain_values somehow?
+                nbr = self.crossword.neighbors(var)
+                inferences = self.ac3(self._get_arcs(variables = [var] + nbr)[0])
+
 
 
 def main():
