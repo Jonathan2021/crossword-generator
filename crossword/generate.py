@@ -113,22 +113,26 @@ class CrosswordCreator():
         Return True if a revision was made to the domain of `x`; return
         False if no revision was made.
         """
-        xi, yi = self.crossword.overlaps[x, y]
-        y_letters = set(word[yi] for word in self.domains[y])
+        xi, yi = self.crossword.overlaps[x, y] # Index of the overlap in x and y variables respectively
+        y_letters = set(word[yi] for word in self.domains[y]) # The possible letters for y at the overlap
 
         length_before = len(self.domains[x])
-        self.domains[x] = [word for word in self.domains[x] if word[xi] in y_letters]
-        return length_before != len(self.domains[x])
+        self.domains[x] = [word for word in self.domains[x] if word[xi] in y_letters] # Remove words in x's domain that have a letter at the overlap not present in any of y's domain
+        return length_before != len(self.domains[x]) # True iif we removed some values in x's domain
 
+    #FIXME Should keep as an attribute all neighbors (constructed once) and just remove undesiable variables if 'variables' != None
     def _get_all_neighbors(self, variables= None):
+        # Construct of a dictionary with elements of 'variables' as keys and the list of neighbors in present in 'variables' as values. If 'variables' is None, use all the variables from the puzzle
         neighbors = dict()
         if not variables:
             variables = self.crossword.variables
 
-        # just a bit faster than calling neighbors on each
+        # just a bit faster than calling neighbors on each but still O(n^2)
         for i, v1 in enumerate(variables):
             for v2 in list(variables)[i+1:]:
                 if v2 != v1 and self.crossword.overlaps[v1, v2]:
+
+                    # Add v2 as a neighbor of v1 and vice versa
                     if not v1 in neighbors:
                         neighbors[v1] = {v2}
                     else:
@@ -139,7 +143,9 @@ class CrosswordCreator():
                         neighbors[v2].add(v1)
         return neighbors
 
+    #FIXME Returning arcs and neighbors is a bit ugly. Perhaps there is a cleaner way.
     def _get_arcs(self, variables = None):
+        # Get the arcs of the binary constraint graph taking only 'variables' into account. If 'variables' is None then it's the set of all the puzzle's variables.
         neighbors = self._get_all_neighbors(variables)
         return [(v1, v2) for v1, v2s in neighbors.items() for v2 in v2s], neighbors
 
@@ -160,11 +166,12 @@ class CrosswordCreator():
 
         while arcs:
             x, y = arcs.pop()
-            if self.revise(x,y):
-                if not self.domains[x]:
+            if self.revise(x,y): # Prune x's domain
+                if not self.domains[x]: # If x doesn't have any possible value left, then Failure
                     return False
                 else:
-                    arcs = arcs + [(z,x) for z in neighbors[x] if z != y]
+                    # Add neighbors of x affected by the change (except y) to arcs
+                    arcs = arcs + [(z,x) for z in neighbors[x] if z != y] # Neighbors will contain any of the variables from the puzzle. Not just the ones present in arcs. This is desirable as modification in domains in arcs can affect neighbors not present in arcs at first.
         return True
 
     def assignment_complete(self, assignment):
@@ -183,13 +190,13 @@ class CrosswordCreator():
         
         vals = set()
         for var, val in assignment.items():
-            if val in vals or len(val) != var.length: # Not even sure if checking length is useful
+            if val in vals or len(val) != var.length: # Checking length is redondant in our implementation since we pruned all values that don't satisfy the unary constraint at the start. Still we keep it as it is part of consistency in the general backtracking algo to check unary constraints.
                 return False
             vals.add(val)
 
         all_neighbors = self._get_all_neighbors(assignment.keys())
 
-        #FIXME There is some double checks we may be able to get rid of somehow
+        #FIXME There is some double checks we may be able to get rid of somehow if we want to make things faster
         for var, neighbors in all_neighbors.items():
             for n in neighbors:
                 vari, ni = self.crossword.overlaps[var, n]
@@ -211,22 +218,25 @@ class CrosswordCreator():
         constraint_list = list()
         index_letter_constraints = dict()
 
+        # Dict with indices of var as keys and lists (not set as we may want duplicates) of letters in the neighbors of var at the overlapping position.
         for nbr in unassigned_neighbors:
             i, j = self.crossword.overlaps[var, nbr]
             if i not in index_letter_constraints:
                 index_letter_constraints[i] = list()
             index_letter_constraints[i] += [nbr_val[j] for nbr_val in self.domains[nbr]]
 
+        # For every value in var's domain, count the number of ruled out possible neighboring values.
         for var_val in self.domains[var]:
             constraint_list.append((
                     var_val,
                     sum([letter != var_val[index] for index, letters in index_letter_constraints.items() for letter in letters])
                     ))            
 
+        # Shuffle to add some randomness in case of equal LCVs.
         random.shuffle(constraint_list) #FIXME If the list is long, might be ineffective
         constraint_list.sort(key = lambda x: x[1])
 
-        return [val for val, _ in constraint_list]
+        return [val for val, _ in constraint_list] # List ordered from least to most constraining
 
     def select_unassigned_variable(self, assignment):
         """
@@ -239,17 +249,19 @@ class CrosswordCreator():
         
         unassigned = list(self.crossword.variables - set(assignment.keys()))
 
+        # Shuffle to add randomness in case both heuristics are equal
         random.shuffle(unassigned) #FIXME uneffective if long list
 
+        # Sort by increasing domain length and then decreasing degree
         unassigned.sort(key = lambda x: (len(self.domains[x]), -len(self.crossword.neighbors(x))))
         return unassigned[0] if unassigned else None
 
     def inference(self, var, assignment):
         # Making inferences given var assignment
-        #print(f"Inferencing for assignment of {var} as {assignment[var]}")
-        self.domains[var] = set([assignment[var]])
-        arcs = [(n, var) for n in self.crossword.neighbors(var)]
+        self.domains[var] = set([assignment[var]]) # Reduce var's domain to its assignment.
+        arcs = [(n, var) for n in self.crossword.neighbors(var)] # add all arcs from neighbors to var
 
+        # Apply ac3 with the arcs and propagate failure if there is no possible solution. If they may be a solution, add variables with domain length of 1 (1 possible value) as inferecences.
         return {x: self.domains[x][0] for x in set(self.domains.keys()) - set(assignment.keys()) if len(self.domains[x]) == 1} if self.ac3(arcs=arcs) else None
 
 
@@ -262,29 +274,29 @@ class CrosswordCreator():
 
         If no assignment is possible, return None.
         """
-        #self.print(assignment)
         if self.assignment_complete(assignment):
-            return assignment
-        var = self.select_unassigned_variable(assignment)
+            return assignment # Yay we found a solution.
+        var = self.select_unassigned_variable(assignment) # Select a variable acording to some heuristics
         
-        for val in self.order_domain_values(var, assignment):
+        for val in self.order_domain_values(var, assignment): # Order the selected variable's domain according to LCV 
             assignment[var] = val
-            if self.consistent(assignment): #FIXME self.consistent checks everything when you only need to check the neighbors of the new variable + don't we already check it in self.order_domain_values somehow?
-                old_domains = deepcopy(self.domains)
+            if self.consistent(assignment):
+                old_domains = deepcopy(self.domains) # Keep track of the current domain state
                 inferences = self.inference(var, assignment)
 
+                # If inferences didn't result in a failure
                 if inferences is not None: # Have to check is not None because if not then empty inference would mean failure if you did 'if inferences'
-                    assignment.update(inferences)
-                    
-                    result = self.backtrack(assignment)
+                    assignment.update(inferences) # Add the inferences to assignements
+                
+                    result = self.backtrack(assignment) # Backtrack deeper with the new assignments
                     if result:
-                        return result
-                    for inf in inferences:
+                        return result # We propagate the solution back up
+                    for inf in inferences: # Remove the made inferences from assignements
                         del assignment[inf]
 
-                self.domains = old_domains
+                self.domains = old_domains # Restore the domain to its state
         del assignment[var]
-        return None
+        return None # This path results in a failure
 
 
 def main():
