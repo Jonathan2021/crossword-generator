@@ -115,7 +115,7 @@ class CrosswordCreator():
         xi, yi = self.crossword.overlaps[x, y]
         y_letters = set(word[yi] for word in self.domains[y])
         length_before = len(self.domains[x])
-        self.domains[x] = [word for word in self.domain[x] if x[xi] in y_letters]
+        self.domains[x] = [word for word in self.domains[x] if word[xi] in y_letters]
         return length_before != len(self.domains[x])
 
     def _get_all_neighbors(self, variables= None):
@@ -125,7 +125,7 @@ class CrosswordCreator():
 
         # just a bit faster than calling neighbors on each
         for i, v1 in enumerate(variables):
-            for v2 in variables[i+1:]:
+            for v2 in list(variables)[i+1:]:
                 if v2 != v1 and self.crossword.overlaps[v1, v2]:
                     if not v1 in neighbors:
                         neighbors[v1] = {v2}
@@ -153,10 +153,12 @@ class CrosswordCreator():
 
         if not arcs:
             arcs, neighbors = self._get_arcs()
+        else:
+            neighbors = self._get_all_neighbors()
 
         while arcs:
             x, y = arcs.pop()
-            if revise(x,y):
+            if self.revise(x,y):
                 if not self.domains[x]:
                     return False
                 else:
@@ -179,7 +181,7 @@ class CrosswordCreator():
         
         vals = set()
         for var, val in assignment.items():
-            if val in vals or len(val) == var.length:
+            if val in vals or len(val) != var.length: # Not even sure if checking length is useful
                 return False
             vals.add(val)
 
@@ -214,15 +216,15 @@ class CrosswordCreator():
             index_letter_constraints[i] += [nbr_val[j] for nbr_val in self.domains[nbr]]
 
         for var_val in self.domains[var]:
-            constraint_list.append(
-                    var,
+            constraint_list.append((
+                    var_val,
                     sum([letter != var_val[index] for index, letters in index_letter_constraints.items() for letter in letters])
-                    )            
+                    ))            
 
         random.shuffle(constraint_list) #FIXME If the list is long, might be ineffective
         constraint_list.sort(key = lambda x: x[1])
 
-        return [var for var, _ in constraint_list]
+        return [val for val, _ in constraint_list]
 
     def select_unassigned_variable(self, assignment):
         """
@@ -233,14 +235,11 @@ class CrosswordCreator():
         return values.
         """
         
-        unassigned = self.crossword.variables - set(self.assignment.keys())
+        unassigned = list(self.crossword.variables - set(assignment.keys()))
 
-        consider = list()
-        cur_min = len(self.crossword.words)
-        
         random.shuffle(unassigned) #FIXME uneffective if long list
 
-        unassigned.sort(key = lambda x: (len(self.domains[x]), -len(self.crossword.neighbors())))
+        unassigned.sort(key = lambda x: (len(self.domains[x]), -len(self.crossword.neighbors(x))))
         return unassigned[0] if unassigned else None
 
     def backtrack(self, assignment):
@@ -252,17 +251,19 @@ class CrosswordCreator():
 
         If no assignment is possible, return None.
         """
+        #self.print(assignment)
         if self.assignment_complete(assignment):
             return assignment
         var = self.select_unassigned_variable(assignment)
         
-        new_assignment = assignment.copy()
         for val in self.order_domain_values(var, assignment):
-            new_assignment[var] = val
-            if self.consistent(new_assignement): #FIXME self.consistent checks everything when you only need to check the neighbors of the new variable + don't we already check it in self.order_domain_values somehow?
-                nbr = self.crossword.neighbors(var)
-                inferences = self.ac3(self._get_arcs(variables = [var] + nbr)[0])
-
+            assignment[var] = val
+            if self.consistent(assignment): #FIXME self.consistent checks everything when you only need to check the neighbors of the new variable + don't we already check it in self.order_domain_values somehow?
+                result = self.backtrack(assignment)
+                if result:
+                    return result
+        del assignment[var]
+        return None
 
 
 def main():
