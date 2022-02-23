@@ -1,4 +1,5 @@
 import sys
+from copy import deepcopy
 import random
 
 from crossword import *
@@ -114,6 +115,7 @@ class CrosswordCreator():
         """
         xi, yi = self.crossword.overlaps[x, y]
         y_letters = set(word[yi] for word in self.domains[y])
+
         length_before = len(self.domains[x])
         self.domains[x] = [word for word in self.domains[x] if word[xi] in y_letters]
         return length_before != len(self.domains[x])
@@ -242,6 +244,15 @@ class CrosswordCreator():
         unassigned.sort(key = lambda x: (len(self.domains[x]), -len(self.crossword.neighbors(x))))
         return unassigned[0] if unassigned else None
 
+    def inference(self, var, assignment):
+        # Making inferences given var assignment
+        #print(f"Inferencing for assignment of {var} as {assignment[var]}")
+        self.domains[var] = set([assignment[var]])
+        arcs = [(n, var) for n in self.crossword.neighbors(var)]
+
+        return {x: self.domains[x][0] for x in set(self.domains.keys()) - set(assignment.keys()) if len(self.domains[x]) == 1} if self.ac3(arcs=arcs) else None
+
+
     def backtrack(self, assignment):
         """
         Using Backtracking Search, take as input a partial assignment for the
@@ -259,9 +270,19 @@ class CrosswordCreator():
         for val in self.order_domain_values(var, assignment):
             assignment[var] = val
             if self.consistent(assignment): #FIXME self.consistent checks everything when you only need to check the neighbors of the new variable + don't we already check it in self.order_domain_values somehow?
-                result = self.backtrack(assignment)
-                if result:
-                    return result
+                old_domains = deepcopy(self.domains)
+                inferences = self.inference(var, assignment)
+
+                if inferences is not None: # Have to check is not None because if not then empty inference would mean failure if you did 'if inferences'
+                    assignment.update(inferences)
+                    
+                    result = self.backtrack(assignment)
+                    if result:
+                        return result
+                    for inf in inferences:
+                        del assignment[inf]
+
+                self.domains = old_domains
         del assignment[var]
         return None
 
