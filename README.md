@@ -16,13 +16,13 @@ To test the performance, three different puzzles were generated, of which the ti
 
 
 First crossword puzzle: ~3.9s
-![plot](./images/image1.png)
+![plot](./images/image1-1.png)
 
 Second crossword puzzle: ~6.5s
-![plot](./images/image2.png)
+![plot](./images/image2-1.png)
 
 Third crossword puzzle: ~25.6s
-![plot](./images/image3.png)
+![plot](./images/image3-1.png)
 
 ## Algorithms
 
