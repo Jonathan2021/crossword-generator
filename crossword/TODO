@@ -1,1 +1,0 @@
-Maybe make the first call to neighbor construct the list and subsequent just return the list.
