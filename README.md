@@ -5,7 +5,7 @@ This repository shows the software made in relation to the [third project exerci
 ## Usage
 
 ```bash
-python3 generate.py data/structure.txt data/words.txt output.png
+python3 generate.py data/structure.txt data/words.txt [output.png]
 ```
 
 Currently, words from [the New York Times crossword database](https://www.kaggle.com/darinhawley/new-york-times-crossword-clues-answers-19932021) are available, as well as three different structures. An image with the generated puzzle can optionally be saved in PNG format.
@@ -43,5 +43,6 @@ In the context of the crossword puzzle, a conflict occurs in a square where two 
 ### Backtracking DFS
 [Backtracking](https://en.wikipedia.org/wiki/Backtracking) is used as a problem solving method to correctly complete the crossword puzzle. If constraints on the selection of the value are not met, a backtrack occurs. If all nodes have been traversed, there is no solution for word combinations. Otherwise, the solution is found during the DFS.
 
-To assign the most constrained variable first, the variable with the minimum remaining value (MRV) is chosen. In case of a tie, the variable with the highest degree is preferred.
+To assign the most constrained variable first, the variable with the minimum remaining value (MRV) is chosen. In case of a tie, the variable with the highest degree is preferred. Values for this variable are then tried out in order based on their least-contraining value heuristic score.
 
+An inference step has been added after the value assignment step to reduce the domain of linked variables (applying binary constraints), infer enforced assignments or discover unfeasibility resulting in a backtrack, before continuing the DFS. This greatly reduces the execution time of the search, especially for structures with a high number of binary constraints.
