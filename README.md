@@ -36,12 +36,12 @@ All values that do not meet the unary constraints of a variable can be removed f
 The unary constraint for a variable is given by the length or the number of letters of the word.  Also, the condition that all words must be different is added.  In terms of the crossword puzzle, each value in the domain of a variable has the same number of letters as the length of the variable.
 
 ### Binary constraints
-The binary conditions control links between two variables. The arc-consistency reduces the search space for a CSP by removing unsupported values from the domains of the variables. The [AC3 algorithm](https://de.wikipedia.org/wiki/AC-3-Algorithmus) is used to enforce and ensure the arc consistency of the problem. This way the binary constraints are fulfilled. Two variables are arc-consistent if each value in the range of one has a possible value in the range of the other that does not cause a conflict. 
+The binary conditions control links between two variables. The arc-consistency reduces the search space for a CSP by removing unsupported values from the domains of the variables. The [AC3 algorithm](https://en.wikipedia.org/wiki/AC-3_algorithm) is used to enforce and ensure the arc consistency of the problem. This way the binary constraints are fulfilled. Two variables are arc-consistent if each value in the range of one has a possible value in the range of the other that does not cause a conflict. 
 
 In the context of the crossword puzzle, a conflict occurs in a square where two variables disagree on which character value to take. 
 
 ### Backtracking DFS
-Backtracking is used as a problem solving method to correctly complete the crossword puzzle. If constraints on the selection of the value are not met, a backtrack occurs. If all nodes have been traversed, there is no solution for word combinations. Otherwise, the solution is found during the DFS.
+[Backtracking](https://en.wikipedia.org/wiki/Backtracking) is used as a problem solving method to correctly complete the crossword puzzle. If constraints on the selection of the value are not met, a backtrack occurs. If all nodes have been traversed, there is no solution for word combinations. Otherwise, the solution is found during the DFS.
 
 To assign the most constrained variable first, the variable with the minimum remaining value (MRV) is chosen. In case of a tie, the variable with the highest degree is preferred.
 
