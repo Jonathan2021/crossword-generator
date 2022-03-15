@@ -16,6 +16,7 @@ To test the performance, three different puzzles were generated, of which the ti
 
 <p align="center"> First crossword puzzle: ~3.9s </p>
 
+<<<<<<< HEAD
 ![plot](./images/image1-1.png)
 
 <p align="center"> Second crossword puzzle: ~6.5s </p>
@@ -24,6 +25,15 @@ To test the performance, three different puzzles were generated, of which the ti
 
 <p align="center"> Third crossword puzzle: ~25.6s </p>
 
+=======
+<p align="center"> First crossword puzzle: ~3.9s </p>
+![plot](./images/image1-1.png)
+
+<p align="center"> Second crossword puzzle: ~6.5s </p>
+![plot](./images/image2-1.png)
+
+<p align="center"> Third crossword puzzle: ~25.6s </p>
+>>>>>>> 3c1306ee62bb733042352f6b79206a4d62da0c6c
 ![plot](./images/image3-1.png)
 
 ## Algorithms
