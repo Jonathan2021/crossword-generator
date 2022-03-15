@@ -14,14 +14,16 @@ Currently, words from [the New York Times crossword database](https://www.kaggle
 
 To test the performance, three different puzzles were generated, of which the time of the algorithm was measured. 
 
+<p align="center"> First crossword puzzle: ~3.9s </p>
 
-First crossword puzzle: ~3.9s
 ![plot](./images/image1-1.png)
 
-Second crossword puzzle: ~6.5s
+<p align="center"> Second crossword puzzle: ~6.5s </p>
+
 ![plot](./images/image2-1.png)
 
-Third crossword puzzle: ~25.6s
+<p align="center"> Third crossword puzzle: ~25.6s </p>
+
 ![plot](./images/image3-1.png)
 
 ## Algorithms
